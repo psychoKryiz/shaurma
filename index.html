@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>От ларька до империи — прототип</title>
+<title>Шаурма Тайкун</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700;800;900&display=swap" rel="stylesheet">
 <style>
@@ -17,7 +17,10 @@
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;min-height:100%;background:radial-gradient(120% 80% at 50% 0%,var(--night2),var(--night));
     color:var(--ink);font-family:"Rubik",system-ui,sans-serif;user-select:none;-webkit-user-select:none}
-  #app{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;padding-bottom:84px}
+  /* Прокрутка внутри своего контейнера: работает и в iframe ВК, где прокрутка страницы отключена */
+  html,body{height:100%;overflow:hidden}
+  #scroller{position:fixed;inset:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+  #app{max-width:480px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;padding-bottom:96px}
 
   /* ---------- верхняя панель ---------- */
   .top{position:sticky;top:0;z-index:10;padding:10px 12px 8px;display:flex;gap:8px;align-items:center;
@@ -192,12 +195,32 @@
   @keyframes shake{20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
   .modal .stack{display:flex;flex-direction:column}
   .vkTag{font-size:11px;color:#cdbdf5;text-align:center;margin-top:14px}
+  /* локации */
+  .locBar{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+  .locBtn{border:0;font:inherit;font-weight:800;padding:9px 6px;border-radius:14px;background:rgba(255,255,255,.08);
+    color:#cdbdf5;cursor:pointer;font-size:14px;border:2px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;gap:6px}
+  .locBtn.on{background:linear-gradient(180deg,#ff9a3c,#e8641a);color:#fff;box-shadow:0 3px 0 #b84a0c;border-color:transparent}
+  .locBtn.mia.on{background:linear-gradient(180deg,#ff6fb5,#c43d8b);box-shadow:0 3px 0 #8f2563}
+  .locBtn small{font-size:11px;font-weight:700;opacity:.85}
+  .locBtn.locked{opacity:.8}
+  .locBtn.glow{animation:pulse 1.2s infinite}
+  /* меню */
+  .menuItem{display:grid;grid-template-columns:44px 1fr 116px;gap:10px;align-items:center;margin-bottom:8px;padding:10px}
+  .menuItem .ico{width:44px;height:44px;border-radius:12px;background:#fff;box-shadow:inset 0 -3px 0 var(--edge);display:flex;align-items:center;justify-content:center;font-size:24px}
+  .menuItem .nm{font-weight:800;font-size:14px}
+  .menuItem .ds{font-size:12px;color:var(--ink2)}
+  .menuItem.owned{background:linear-gradient(135deg,#eafff0,#d6f7e1);box-shadow:0 4px 0 #b6e3c4}
+  .menuItem .btn{font-size:13px;padding:8px 6px}
+  .menuItem .ok{font-weight:800;color:var(--green-d);text-align:center;font-size:13px}
+  /* инвестиции */
+  .invBtn{margin-top:6px;font-size:12.5px;padding:7px 8px;justify-content:space-between}
+  .invBtn .stars{letter-spacing:1px;font-size:12px}
 </style>
 <!-- VK Bridge: внутри ВКонтакте даёт доступ к рекламе, облачным сохранениям и т.д. -->
 <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
 </head>
 <body>
-<div id="app">
+<div id="scroller"><div id="app">
   <div class="top">
     <div class="pill"><div class="coin">₽</div><span class="money" id="money">0</span></div>
     <div class="pill ips"><div class="ic">▲</div><span id="ips">0/с</span></div>
@@ -208,6 +231,10 @@
 
   <!-- ===== ЛАВКА ===== -->
   <section class="tab on" id="tab-stall">
+    <div class="locBar">
+      <button class="locBtn on" data-loc="msk">🏙️ Москва <small id="mskLvl"></small></button>
+      <button class="locBtn mia locked" data-loc="mia">🌴 Майами <small id="miaLock">🔒</small></button>
+    </div>
     <div class="sceneWrap" id="scene">
       <svg viewBox="0 -40 400 360" id="svg">
         <defs>
@@ -223,6 +250,7 @@
           <radialGradient id="lampGlow"><stop offset="0" stop-color="#ffe9a8" stop-opacity=".7"/><stop offset="1" stop-color="#ffe9a8" stop-opacity="0"/></radialGradient>
           <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
         </defs>
+        <g id="bgMsk">
         <rect y="-40" width="400" height="360" fill="url(#sky)"/>
         <g id="stars"></g>
         <circle cx="330" cy="46" r="16" fill="#fff4d6" opacity=".9"/>
@@ -240,6 +268,8 @@
         <rect x="16" y="150" width="5" height="114" fill="#2b2240"/>
         <path d="M18 152 Q18 140 30 140 L36 140" stroke="#2b2240" stroke-width="4" fill="none"/>
         <path d="M28 140 h14 l-3 9 h-8 z" fill="#2b2240"/><circle cx="35" cy="152" r="5" fill="#fff1b8"/>
+        </g>
+        <g id="bgMia" style="display:none"></g>
         <g id="tablesG"></g>
         <g id="stallG"></g>
         <g id="custG"></g>
@@ -267,6 +297,9 @@
 
     <h2>Улучшения лавки <small id="upgCount"></small></h2>
     <div class="grid" id="upgGrid"></div>
+
+    <h2>Меню шаурмичной <small id="menuCount"></small></h2>
+    <div id="menuList"></div>
   </section>
 
   <!-- ===== ИМПЕРИЯ ===== -->
@@ -309,7 +342,7 @@
     <div class="vkTag" id="vkTag"></div>
   </section>
 </div>
-
+</div><!-- /scroller -->
 <nav><div class="navIn">
   <button class="nb on" data-tab="stall"><span>🌯</span>Лавка<i class="dot" id="dot-stall"></i></button>
   <button class="nb" data-tab="empire"><span>🏙️</span>Империя<i class="dot" id="dot-empire"></i></button>
@@ -334,6 +367,32 @@ const STAGES = [
   {name:'Кафе',       icon:'🍽️', w:230, h:150, cost:1e6,   req:30, mult:27, sign:'КАФЕ «ШАУРМА»', color:'#8e5bd6', dark:'#6a3fae'},
   {name:'Шаурма-бар', icon:'🌃', w:250, h:190, cost:5e7,   req:45, mult:81, sign:'ШАУРМА-БАР',    color:'#24505e', dark:'#163640'},
 ];
+// Локации: у каждой своя лавка, свои этапы и улучшения
+const LOCS = {
+  msk:{name:'Москва', icon:'🏙️', mult:1, costMult:1, stages:[]},
+  mia:{name:'Майами', icon:'🌴', mult:1e4, costMult:5e4, stages:[
+    {name:'Пляжная тележка',  icon:'🛒', sign:'ШАУРМА',          color:'#ff6fb5', dark:'#c93f88'},
+    {name:'Киоск у пляжа',    icon:'🏖️', sign:'SHAWARMA',        color:'#2ec4b6', dark:'#1a8c82'},
+    {name:'Бич-бар',          icon:'🍹', sign:'ШАУРМА BEACH',    color:'#ffb347', dark:'#d4801a'},
+    {name:'Кафе на набережной',icon:'🌅', sign:'MIAMI ШАУРМА',   color:'#7b6cff', dark:'#5546cc'},
+    {name:'Шаурма-клуб',      icon:'🌴', sign:'ШАУРМА-КЛУБ',     color:'#ff4f81', dark:'#c42a58'},
+  ]},
+};
+const MIA_LEVEL = 10;          // уровень московской лавки для открытия Майами
+const MIA_COST  = 2.5e8;       // цена переезда
+// Меню: разовые покупки, умножают все продажи во всех лавках
+const MENU = [
+  {id:'cheese',  name:'Шаурма с сыром',     icon:'🧀', cost:2e3,   mult:1.5},
+  {id:'double',  name:'Двойная мясная',     icon:'🥩', cost:6e4,   mult:2},
+  {id:'spicy',   name:'Острая «Мексика»',   icon:'🌶️', cost:2e6,   mult:2},
+  {id:'falafel', name:'Фалафель',           icon:'🧆', cost:6e7,   mult:2.5},
+  {id:'giant',   name:'Шаурма-гигант',      icon:'🍖', cost:2e9,   mult:3},
+  {id:'shrimp',  name:'С креветками',       icon:'🦐', cost:5e11,  mult:3, req:'mia'},
+  {id:'lobster', name:'С лобстером',        icon:'🦞', cost:5e13,  mult:4, req:'mia'},
+  {id:'golden',  name:'Золотая шаурма',     icon:'👑', cost:5e15,  mult:5, req:'mia'},
+];
+// Инвестиции в бизнесы: каждый уровень — прибыль бизнеса ×2
+const INV_MAX = 5, INV_K = 25, INV_G = 10;
 // Улучшения лавки: каждое видно на сцене
 const UPG = [
   {id:'grill',  name:'Гриль',    icon:'🔥', base:15,   g:2.30, max:10, fx:'+1 ₽ к каждой продаже'},
@@ -488,12 +547,21 @@ function flyCoin(x,y){
 /* =========================================================
    СОСТОЯНИЕ
    ========================================================= */
+const defaultLv = ()=> Object.fromEntries(UPG.map(u=>[u.id,0]));
+// S.stage и S.lv — «окно» в лавку текущей локации (в сохранение не попадают)
+function bindStall(s){
+  Object.defineProperty(s,'stage',{get(){ return s.stalls[s.loc].stage; }, set(v){ s.stalls[s.loc].stage=v; }, enumerable:false, configurable:true});
+  Object.defineProperty(s,'lv',{get(){ return s.stalls[s.loc].lv; }, enumerable:false, configurable:true});
+  return s;
+}
 function freshState(rep, lifetimeAll, taps){
-  return {
-    money:0, stage:0, lv:Object.fromEntries(UPG.map(u=>[u.id,0])),
+  return bindStall({
+    money:0, loc:'msk', miaOpen:false, miaHinted:false,
+    stalls:{msk:{stage:0, lv:defaultLv()}, mia:{stage:0, lv:defaultLv()}},
+    menu:{}, inv:BIZ.map(()=>0),
     owned:BIZ.map(()=>0), managers:BIZ.map(()=>false), progress:BIZ.map(()=>0), running:BIZ.map(()=>false),
     rep:rep||0, lifetimeAll:lifetimeAll||0, taps:taps||0, boostUntil:0, lastSave:Date.now(), inviteAt:0, shareAt:0,
-  };
+  });
 }
 let S = freshState();
 let qtyMode=0; const QTY=[1,10,100,'MAX'];
@@ -508,20 +576,32 @@ let FX=[];
 function addFx(kind,mult,sec,label,cls){ FX.push({kind,mult,until:Date.now()+sec*1000,label,cls}); }
 function fx(kind){ const now=Date.now(); let m=1; for(const f of FX) if(f.kind===kind&&f.until>now) m*=f.mult; return m; }
 const incomeMult = (wb=true)=> (1+S.rep*REP_BONUS) * (wb && boostOn() ? 2 : 1) * (wb ? fx('all') : 1);
-function stallMult(wb=true){
-  const L=S.lv;
-  return STAGES[S.stage].mult*(1+.10*L.awning)*(1+.10*L.sign)*(1+.15*L.tables)*(1+.20*L.lights)*incomeMult(wb)*(wb?fx('stall'):1);
+const menuMult = ()=> MENU.reduce((m,d)=> S.menu[d.id] ? m*d.mult : m, 1);
+const locOpen = id => id==='msk' || S.miaOpen;
+// этап лавки с учётом локации (названия, цвета, цена)
+function stageInfo(i, loc=S.loc){
+  const L=LOCS[loc]; return Object.assign({}, STAGES[i], L.stages[i]||{}, {cost:STAGES[i].cost*L.costMult});
 }
-const saleValue = (wb=true)=> (1+S.lv.grill)*stallMult(wb);
+function saleValueOf(loc, wb=true){
+  const st=S.stalls[loc], L=st.lv;
+  return (1+L.grill) * STAGES[st.stage].mult * LOCS[loc].mult
+    *(1+.10*L.awning)*(1+.10*L.sign)*(1+.15*L.tables)*(1+.20*L.lights)
+    *menuMult()*incomeMult(wb)*(wb?fx('stall'):1);
+}
+const sellerPsOf = (loc, wb=true)=> locOpen(loc) ? S.stalls[loc].lv.seller*saleValueOf(loc,wb) : 0;
+const saleValue = (wb=true)=> saleValueOf(S.loc, wb);
 const tapValue = (wb=true)=> saleValue(wb)*(wb?fx('tap'):1);
-const stallPerSec = (wb=true)=> S.lv.seller*saleValue(wb);
-const upgCost = u => u.base*Math.pow(u.g, S.lv[u.id]);
-const totalLevels = ()=> UPG.reduce((s,u)=>s+S.lv[u.id],0);
+const stallPerSec = (wb=true)=> sellerPsOf('msk',wb)+sellerPsOf('mia',wb);
+const upgCost = u => u.base*Math.pow(u.g, S.lv[u.id])*LOCS[S.loc].costMult;
+const totalLevelsOf = loc => UPG.reduce((s,u)=>s+S.stalls[loc].lv[u.id],0);
+const totalLevels = ()=> totalLevelsOf(S.loc);
+const stallLevel = loc => Math.min(10, 1+Math.floor(totalLevelsOf(loc)/6));
+const invCost = i => BIZ[i].cost*INV_K*Math.pow(INV_G, S.inv[i]);
 
 function speedMult(i){ let m=1; for(const ms of MILESTONES) if(S.owned[i]>=ms) m*=2; return m; }
 const nextMilestone = i => MILESTONES.find(ms=>S.owned[i]<ms);
 const cycleTime = i => BIZ[i].time/speedMult(i);
-const cycleRev = (i,wb=true)=> BIZ[i].rev*S.owned[i]*incomeMult(wb);
+const cycleRev = (i,wb=true)=> BIZ[i].rev*S.owned[i]*Math.pow(2,S.inv[i]||0)*incomeMult(wb);
 const bizPerSec = (i,wb=true)=> S.owned[i] ? cycleRev(i,wb)/cycleTime(i) : 0;
 function totalPerSec(wb=true){ let s=stallPerSec(wb); BIZ.forEach((_,i)=>{ if(S.managers[i]) s+=bizPerSec(i,wb); }); return s; }
 function costOf(i,n){ const b=BIZ[i], st=b.cost*Math.pow(b.mult,S.owned[i]); return st*(Math.pow(b.mult,n)-1)/(b.mult-1); }
@@ -603,7 +683,7 @@ function awningSVG(x, y, w, lv){
   return `<g>${s}<rect x="${x-3}" y="${y-4}" width="${w+6}" height="5" rx="2" fill="#7a4a2a"/></g>`;
 }
 function signSVG(cx, y, st, lv){
-  const txt=STAGES[st].sign, fs=13+st*1.2, w=Math.min(STAGES[st].w-6, txt.length*fs*0.66+24), h=fs+14;
+  const txt=stageInfo(st).sign, fs=13+st*1.2, w=Math.min(STAGES[st].w-6, txt.length*fs*0.66+24), h=fs+14;
   const neon=lv>=5;
   return `<g>
     <rect x="${cx-w/2+8}" y="${y+h-2}" width="3" height="10" fill="#4a3424"/><rect x="${cx+w/2-11}" y="${y+h-2}" width="3" height="10" fill="#4a3424"/>
@@ -630,7 +710,7 @@ function tableSVG(tx, umbrella){
   </g>`;
 }
 function buildStall(){
-  const st=S.stage, g=STAGES[st], L=S.lv, w=g.w, x0=200-w/2;
+  const st=S.stage, g=stageInfo(st), L=S.lv, w=g.w, x0=200-w/2;
   let s='';
   if(st===0){
     // ---- тележка ----
@@ -691,9 +771,52 @@ function buildStall(){
   for(let k=0;k<n;k++){ const tx=Math.min(384, Math.max(16,pos[k])); t+=tableSVG(tx, L.tables>=5); }
   $('tablesG').innerHTML=t;
 }
+function palmSVG(x, lean, h, flip){
+  const tx=x+lean, ty=G-h; let fr='';
+  const leaves=[[-70,-10],[-40,-34],[0,-42],[40,-30],[72,-6],[-58,22],[56,24]];
+  leaves.forEach(([dx,dy],k)=>{ const ex=tx+dx, ey=ty+dy+18;
+    fr+=`<path d="M${tx} ${ty} Q${tx+dx*.5} ${ty+dy-14} ${ex} ${ey} Q${tx+dx*.55} ${ty+dy*.4} ${tx} ${ty}z" fill="${k%2?'#2fa84f':'#23893f'}"/>`; });
+  return `<g>
+    <path d="M${x} ${G+2} Q${x+lean*0.2} ${G-h*0.5} ${tx} ${ty}" stroke="#7a4a22" stroke-width="10" fill="none" stroke-linecap="round"/>
+    <path d="M${x} ${G+2} Q${x+lean*0.2} ${G-h*0.5} ${tx} ${ty}" stroke="#a8743c" stroke-width="10" fill="none" stroke-dasharray="3 7"/>
+    ${fr}<circle cx="${tx-5}" cy="${ty+6}" r="5" fill="#6b3e1c"/><circle cx="${tx+5}" cy="${ty+8}" r="5" fill="#7a4a22"/>
+  </g>`;
+}
+function buildMiami(){
+  const r=rng(11); let s=`<defs>
+    <linearGradient id="miaSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b1e6e"/><stop offset=".45" stop-color="#c43d8b"/><stop offset=".8" stop-color="#ff8a5c"/><stop offset="1" stop-color="#ffcf70"/></linearGradient>
+    <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3fd6c9"/><stop offset="1" stop-color="#127a8a"/></linearGradient>
+    <linearGradient id="sunG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff3a0"/><stop offset="1" stop-color="#ff6f61"/></linearGradient></defs>
+    <rect y="-40" width="400" height="245" fill="url(#miaSky)"/>`;
+  for(let i=0;i<22;i++) s+=`<circle cx="${(r()*400).toFixed(0)}" cy="${(r()*90-40).toFixed(0)}" r="${(r()*1.2+.3).toFixed(1)}" fill="#fff" opacity="${(r()*.5+.2).toFixed(2)}"/>`;
+  s+=`<circle cx="200" cy="168" r="66" fill="url(#sunG)"/>`;
+  [[176,3],[186,4],[195,5],[203,6]].forEach(([y,h])=> s+=`<rect x="120" y="${y}" width="160" height="${h}" fill="#ff8a5c"/>`);
+  // небоскрёбы ар-деко
+  const towers=[[6,40],[30,62],[56,34],[300,50],[322,78],[348,44],[372,60]];
+  towers.forEach(([x,h])=>{ s+=`<rect x="${x}" y="${205-h}" width="22" height="${h}" fill="#6a2c7a" opacity=".75"/><rect x="${x+9}" y="${198-h}" width="4" height="8" fill="#6a2c7a" opacity=".75"/>`;
+    for(let wy=210-h; wy<200; wy+=8) s+=`<rect x="${x+4}" y="${wy}" width="14" height="2" fill="#ffd1f0" opacity=".45"/>`; });
+  // море
+  s+=`<rect y="205" width="400" height="37" fill="url(#sea)"/>`;
+  [[210,90],[216,70],[223,50],[230,34],[236,20]].forEach(([y,w])=> s+=`<rect x="${200-w/2}" y="${y}" width="${w}" height="2.5" rx="1.2" fill="#ffe08a" opacity=".75"/>`);
+  for(let i=0;i<9;i++){ const x=r()*380, y=212+r()*24; s+=`<path d="M${x.toFixed(0)} ${y.toFixed(0)} q6 -3 12 0 q6 3 12 0" stroke="#fff" stroke-width="1.5" fill="none" opacity=".45"/>`; }
+  // песок и набережная
+  s+=`<rect y="240" width="400" height="22" fill="#f7d9a2"/>
+    <rect y="262" width="400" height="32" fill="#c48a55"/><rect y="262" width="400" height="3" fill="#e2ac74"/>`;
+  for(let x=0;x<400;x+=22) s+=`<rect x="${x}" y="265" width="1.5" height="29" fill="#9c6a3e"/>`;
+  s+=`<rect y="294" width="400" height="26" fill="#f3cf94"/><rect y="292" width="400" height="3" fill="#b8804c"/>`;
+  s+=`<text x="40" y="312" font-size="10">🐚</text><text x="250" y="315" font-size="10">⭐</text><text x="330" y="310" font-size="9">🐚</text>`;
+  s+=palmSVG(18, 16, 160)+palmSVG(384, -18, 140);
+  $('bgMia').innerHTML=s;
+}
+function applyLocVisual(){
+  $('bgMsk').style.display = S.loc==='msk' ? '' : 'none';
+  $('bgMia').style.display = S.loc==='mia' ? '' : 'none';
+  document.querySelectorAll('.locBtn').forEach(b=>b.classList.toggle('on', b.dataset.loc===S.loc));
+  customers.length=0; sceneKey='';
+}
 let sceneKey='';
 function maybeRebuildScene(){
-  const k=S.stage+'|'+UPG.map(u=>S.lv[u.id]).join(',');
+  const k=S.loc+'|'+S.stage+'|'+UPG.map(u=>S.lv[u.id]).join(',');
   if(k!==sceneKey){ sceneKey=k; buildStall(); }
 }
 
@@ -726,6 +849,7 @@ function tickCustomers(dt){
       <line x1="3" y1="-4" x2="${3-leg}" y2="6" stroke="#2b2240" stroke-width="3.5" stroke-linecap="round"/>
       <rect x="-8" y="-24" width="16" height="22" rx="7" fill="${c.shirt}"/>
       <circle cx="0" cy="-31" r="7" fill="${c.skin}"/>
+      ${S.loc==='mia'?'<rect x="-6.5" y="-34" width="13" height="3.5" rx="1.7" fill="#1a1a2e"/>':''}
       ${c.food?`<text x="${c.dir>0?5:-17}" y="-12" font-size="12">🌯</text>`:''}
       ${c.st==='wait'?`<text x="-6" y="-42" font-size="11">💬</text>`:''}
     </g>`;
@@ -745,21 +869,22 @@ function buildUpgrades(){
       <div class="dots">${'<i></i>'.repeat(u.max)}</div><div class="fx">${u.fx}</div><div class="act"></div>`;
     grid.appendChild(c);
     const o={lv:c.querySelector('.lv'), dots:[...c.querySelectorAll('.dots i')], act:c.querySelector('.act')};
-    o.act.innerHTML='<button class="btn"></button>'; o.btn=o.act.firstChild;
+    o.act.innerHTML='<button class="btn"></button><div class="maxed" style="display:none">✅ Максимум</div>';
+    o.btn=o.act.children[0]; o.maxEl=o.act.children[1];
     o.btn.addEventListener('click',()=>buyUpg(u));
     upgEls[u.id]=o;
   });
 }
 function renderStall(){
   maybeRebuildScene();
-  const g=STAGES[S.stage];
-  setH($('stageTag'), `${g.icon} ${g.name}<small>этап ${S.stage+1} из ${STAGES.length}</small>`);
+  const g=stageInfo(S.stage);
+  setH($('stageTag'), `${g.icon} ${g.name}<small>${LOCS[S.loc].name} · ур. ${stallLevel(S.loc)} · этап ${S.stage+1}/${STAGES.length}</small>`);
   $('tapHint').style.display = S.taps<15 ? '' : 'none';
   setT($('tapVal'), '+'+fmt(tapValue())+' ₽');
-  setT($('stallPs'), fmt(stallPerSec())+' ₽/с');
+  setT($('stallPs'), fmt(sellerPsOf(S.loc))+' ₽/с');
   const tl=totalLevels(); setT($('upgCount'), tl+' / '+UPG.reduce((s,u)=>s+u.max,0));
   // перестройка
-  const nx=STAGES[S.stage+1];
+  const nx=S.stage+1<STAGES.length ? stageInfo(S.stage+1) : null;
   if(nx){
     setT($('rbIcon'), nx.icon);
     setT($('rbTitle'), 'Перестроить в «'+nx.name+'»');
@@ -776,9 +901,86 @@ function renderStall(){
     const o=upgEls[u.id], lv=S.lv[u.id];
     setT(o.lv, 'ур. '+lv+' / '+u.max);
     o.dots.forEach((d,k)=>d.classList.toggle('on', k<lv));
-    if(lv>=u.max){ setH(o.act,'<div class="maxed">✅ Максимум</div>'); }
-    else { const c=upgCost(u); setH(o.btn, coinBtn(fmt(c))); o.btn.disabled=S.money<c; }
+    const isMax=lv>=u.max;
+    o.btn.style.display=isMax?'none':''; o.maxEl.style.display=isMax?'':'none';
+    if(!isMax){ const c=upgCost(u); setH(o.btn, coinBtn(fmt(c))); o.btn.disabled=S.money<c; }
   });
+  renderMenu();
+  renderLocBar();
+}
+// ---- меню ----
+const menuEls={};
+function buildMenu(){
+  const list=$('menuList');
+  MENU.forEach(d=>{
+    const c=document.createElement('div'); c.className='card menuItem';
+    c.innerHTML=`<div class="ico">${d.icon}</div><div><div class="nm">${d.name}</div><div class="ds">Все продажи ×${d.mult}</div></div>
+      <div><button class="btn orange"></button><div class="ok" style="display:none">✅ В меню</div></div>`;
+    list.appendChild(c);
+    const o={root:c, btn:c.querySelector('button'), ok:c.querySelector('.ok'), ds:c.querySelector('.ds')};
+    o.btn.addEventListener('click',()=>buyMenu(d));
+    menuEls[d.id]=o;
+  });
+}
+function renderMenu(){
+  let own=0, firstHidden=false;
+  MENU.forEach((d,k)=>{
+    const o=menuEls[d.id], has=!!S.menu[d.id]; if(has) own++;
+    // показываем купленные и два следующих блюда
+    const prevOwnedCount=MENU.slice(0,k).filter(x=>!S.menu[x.id]).length;
+    o.root.style.display = has || prevOwnedCount<2 ? '' : 'none';
+    o.root.classList.toggle('owned', has);
+    o.btn.style.display=has?'none':''; o.ok.style.display=has?'':'none';
+    if(!has){
+      if(d.req==='mia' && !S.miaOpen){ setH(o.btn,'🔒 Майами'); o.btn.disabled=true; }
+      else { setH(o.btn, coinBtn(fmt(d.cost))); o.btn.disabled=S.money<d.cost; }
+    }
+  });
+  setT($('menuCount'), own+' / '+MENU.length+' · продажи ×'+fmt(menuMult()));
+}
+function buyMenu(d){
+  if(S.menu[d.id] || S.money<d.cost || (d.req==='mia'&&!S.miaOpen)) return;
+  S.money-=d.cost; S.menu[d.id]=true; Sound.fanfare(); confettiBurst(60);
+  toast(d.icon+' В меню: '+d.name+'! Продажи ×'+d.mult); save(true);
+}
+// ---- локации ----
+function renderLocBar(){
+  const lvl=stallLevel('msk');
+  setT($('mskLvl'), 'ур. '+lvl);
+  const mb=document.querySelector('.locBtn.mia');
+  mb.classList.toggle('locked', !S.miaOpen);
+  mb.classList.toggle('glow', !S.miaOpen && lvl>=MIA_LEVEL);
+  setT($('miaLock'), S.miaOpen ? 'ур. '+stallLevel('mia') : (lvl>=MIA_LEVEL ? '✨ открыть' : '🔒 ур. '+MIA_LEVEL));
+}
+function switchLoc(id){
+  Sound.click();
+  if(id==='mia' && !S.miaOpen){ askMiami(); return; }
+  if(S.loc===id) return;
+  S.loc=id; applyLocVisual(); render();
+  toast(LOCS[id].icon+' '+LOCS[id].name);
+}
+function askMiami(){
+  const lvl=stallLevel('msk');
+  if(lvl<MIA_LEVEL){
+    modal(`<div class="em">🌴</div><h3>Майами</h3><p>Солнце, пляж и шаурма с креветками! Чтобы переехать, прокачайте лавку в Москве до <b>${MIA_LEVEL} уровня</b>.</p>
+      <div class="big">ур. ${lvl} / ${MIA_LEVEL}</div><p>Уровень растёт с каждыми 6 улучшениями лавки.</p>
+      <button class="btn ghost" id="mOk">Понятно</button>`);
+    $('mOk').onclick=closeModal; return;
+  }
+  modal(`<div class="em">🌴</div><h3>Открыть Майами?</h3><p>Новая лавка на пляже: продажи там в <b>10 000 раз</b> дороже. Московская лавка продолжит работать.</p>
+    <div class="big">${fmt(MIA_COST)} ₽</div>
+    <button class="btn orange" id="mYes" ${S.money<MIA_COST?'disabled':''}>${S.money<MIA_COST?'Не хватает денег':'Переехать в Майами!'}</button>
+    <button class="btn ghost" id="mNo">Позже</button>`);
+  $('mNo').onclick=closeModal;
+  $('mYes').onclick=()=>{ if(S.money<MIA_COST) return; S.money-=MIA_COST; S.miaOpen=true; S.loc='mia'; closeModal(); applyLocVisual();
+    Sound.fanfare(); confettiBurst(220); save(true);
+    modal(`<div class="em">🏝️</div><h3>Добро пожаловать в Майами!</h3><p>Начните с пляжной тележки и постройте шаурма-клуб. Переключаться между городами можно кнопками над лавкой.</p><button class="btn orange" id="mOk">Поехали!</button>`);
+    $('mOk').onclick=closeModal; };
+}
+function checkMiamiHint(){
+  if(!S.miaOpen && !S.miaHinted && stallLevel('msk')>=MIA_LEVEL){
+    S.miaHinted=true; Sound.gold(); toast('🌴 Лавка 10 уровня! Открыта новая локация — Майами');
+  }
 }
 
 /* =========================================================
@@ -792,13 +994,15 @@ function buildBiz(){
     c.innerHTML=`<div class="bIcon">${b.icon}<span class="bOwned">0</span></div>
       <div><div class="bRow"><span class="bName">${b.name}</span><span class="bMs"></span></div>
       <div class="bar"><div class="fill"></div><div class="txt"><span class="rv"></span><span class="tm"></span></div></div>
-      <div class="bBtns"><button class="btn orange buy"></button><button class="btn mgr"></button></div></div>`;
+      <div class="bBtns"><button class="btn orange buy"></button><button class="btn mgr"></button></div>
+      <button class="btn blue invBtn"></button></div>`;
     list.appendChild(c);
     const o={root:c, icon:c.querySelector('.bIcon'), owned:c.querySelector('.bOwned'), ms:c.querySelector('.bMs'),
       fill:c.querySelector('.fill'), rv:c.querySelector('.rv'), tm:c.querySelector('.tm'), buy:c.querySelector('.buy'), mgr:c.querySelector('.mgr')};
     o.icon.addEventListener('click', ()=>tapBiz(i));
     o.buy.addEventListener('click', ()=>buyBiz(i));
     o.mgr.addEventListener('click', ()=>hire(i));
+    o.inv=c.querySelector('.invBtn'); o.inv.addEventListener('click', ()=>invest(i));
     bizEls.push(o);
   });
 }
@@ -825,6 +1029,10 @@ function renderEmpire(){
     o.buy.disabled=S.money<price;
     if(S.managers[i]){ setH(o.mgr,'✅ Менеджер<small>работает сам</small>'); o.mgr.disabled=true; }
     else { setH(o.mgr,'👔 Менеджер<small>'+coinBtn(fmt(b.mgr))+'</small>'); o.mgr.disabled=S.money<b.mgr||owned===0; }
+    const il=S.inv[i]||0, stars='★'.repeat(il)+'☆'.repeat(INV_MAX-il);
+    o.inv.style.display = owned ? '' : 'none';
+    if(il>=INV_MAX){ setH(o.inv, `<span>📈 Инвестиции: максимум (×${2**il})</span><span class="stars">${stars}</span>`); o.inv.disabled=true; }
+    else { setH(o.inv, `<span>📈 Прибыль ×2 · ${coinBtn(fmt(invCost(i)))}</span><span class="stars">${stars}</span>`); o.inv.disabled=S.money<invCost(i); }
   });
 }
 
@@ -843,8 +1051,10 @@ function renderTop(){
   const g=repGain(); setT($('repBtn'), g>0 ? 'Продать за +'+g+' ⭐' : 'Пока нет репутации'); $('repBtn').disabled=g<1;
   setH($('statsTxt'), `Репутация: <b>${S.rep}</b> (+${Math.round(S.rep*REP_BONUS*100)}% к доходу)<br>Заработано за всё время: <b>${fmt(S.lifetimeAll)} ₽</b><br>Продаж руками: <b>${fmt(S.taps)}</b>`);
   // красные точки — есть что купить
-  const canStall = UPG.some(u=>S.lv[u.id]<u.max && S.money>=upgCost(u)) || (STAGES[S.stage+1] && totalLevels()>=STAGES[S.stage+1].req && S.money>=STAGES[S.stage+1].cost);
-  const canEmp = BIZ.some((b,i)=> (S.owned[i]===0 && (i===0||S.owned[i-1]>0) && S.money>=costOf(i,1)) || (S.owned[i]>0 && !S.managers[i] && S.money>=b.mgr));
+  const nxs = S.stage+1<STAGES.length ? stageInfo(S.stage+1) : null;
+  const canStall = UPG.some(u=>S.lv[u.id]<u.max && S.money>=upgCost(u)) || (nxs && totalLevels()>=nxs.req && S.money>=nxs.cost)
+    || MENU.some(d=>!S.menu[d.id] && S.money>=d.cost && (d.req!=='mia'||S.miaOpen)) || (!S.miaOpen && stallLevel('msk')>=MIA_LEVEL && S.money>=MIA_COST);
+  const canEmp = BIZ.some((b,i)=> (S.owned[i]>0 && (S.inv[i]||0)<INV_MAX && S.money>=invCost(i)) || (S.owned[i]===0 && (i===0||S.owned[i-1]>0) && S.money>=costOf(i,1)) || (S.owned[i]>0 && !S.managers[i] && S.money>=b.mgr));
   $('dot-stall').style.display = canStall && tab!=='stall' ? 'block':'none';
   $('dot-empire').style.display = canEmp && tab!=='empire' ? 'block':'none';
   $('dot-bonus').style.display = g>0 && tab!=='bonus' ? 'block':'none';
@@ -868,7 +1078,7 @@ function showTab(t){
   tab=t;
   document.querySelectorAll('.tab').forEach(s=>s.classList.toggle('on', s.id==='tab-'+t));
   document.querySelectorAll('.nb').forEach(b=>b.classList.toggle('on', b.dataset.tab===t));
-  window.scrollTo(0,0); render();
+  $('scroller').scrollTop=0; render();
 }
 
 function floatAt(parent, x, y, txt, cls){
@@ -899,7 +1109,7 @@ function buyUpg(u){
   else if(S.lv[u.id]===5 && (u.id==='grill')) toast('🔥 Второй вертел!');
 }
 function rebuild(){
-  const nx=STAGES[S.stage+1]; if(!nx || totalLevels()<nx.req || S.money<nx.cost) return;
+  const nx=S.stage+1<STAGES.length ? stageInfo(S.stage+1) : null; if(!nx || totalLevels()<nx.req || S.money<nx.cost) return;
   S.money-=nx.cost; S.stage++; save(true);
   Sound.fanfare(); confettiBurst(160); const sc=$('scene'); sc.classList.remove('shake'); void sc.offsetWidth; sc.classList.add('shake');
   modal(`<div class="em">${nx.icon}</div><h3>Теперь у вас ${nx.name}!</h3>
@@ -914,6 +1124,11 @@ function buyBiz(i){
   if(S.owned[i]===q){ toast('🎉 Открыт бизнес: '+BIZ[i].name+'. Нажмите на иконку!'); confettiBurst(60, innerWidth/2, innerHeight/2); }
   else if(before && S.owned[i]>=before){ toast('⚡ '+BIZ[i].name+': скорость ×2!'); Sound.gold(); }
 }
+function invest(i){
+  if((S.inv[i]||0)>=INV_MAX) return; const c=invCost(i); if(S.money<c) return;
+  S.money-=c; S.inv[i]=(S.inv[i]||0)+1; Sound.fanfare(); confettiBurst(50, innerWidth/2, innerHeight/2);
+  toast('📈 '+BIZ[i].name+': прибыль ×'+(2**S.inv[i]));
+}
 function hire(i){ if(S.money<BIZ[i].mgr||S.managers[i]) return; S.money-=BIZ[i].mgr; S.managers[i]=true; Sound.fanfare(); toast('👔 '+BIZ[i].name+' теперь работает без вас'); }
 function boost(){ Platform.showRewarded(ok=>{ if(!ok) return; S.boostUntil=Math.max(Date.now(),S.boostUntil)+BOOST_MS; Sound.gold(); toast('🔥 Весь доход ×2!'); save(true); }); }
 function askPrestige(){
@@ -922,7 +1137,7 @@ function askPrestige(){
     <p>Вы начнёте заново с тележки, но получите репутацию — навсегда +2% к доходу за каждую.</p>
     <div class="big">+${g} ⭐</div><p>Итого: ${S.rep+g} (+${Math.round((S.rep+g)*REP_BONUS*100)}% дохода)</p>
     <button class="btn purple" id="pYes">Продать и начать заново</button><button class="btn ghost" id="pNo">Отмена</button>`);
-  $('pYes').onclick=()=>{ const r=S.rep+g, ia=S.inviteAt, sa=S.shareAt; S=freshState(r,S.lifetimeAll,S.taps); S.inviteAt=ia; S.shareAt=sa; FX=[]; sceneKey=''; save(true); closeModal(); showTab('stall'); Sound.fanfare(); confettiBurst(200); toast('⭐ Репутация: '+r); };
+  $('pYes').onclick=()=>{ const r=S.rep+g, ia=S.inviteAt, sa=S.shareAt; S=freshState(r,S.lifetimeAll,S.taps); S.inviteAt=ia; S.shareAt=sa; FX=[]; applyLocVisual(); save(true); closeModal(); showTab('stall'); Sound.fanfare(); confettiBurst(200); toast('⭐ Репутация: '+r); };
   $('pNo').onclick=closeModal;
 }
 
@@ -1005,7 +1220,7 @@ function inviteFriends(){
 }
 function shareWall(){
   if(Date.now()<S.shareAt+COOLDOWN) return;
-  const text=`Моя шаурмичная «${STAGES[S.stage].name}» приносит ${fmt(totalPerSec(false))} ₽ в секунду! 🌯 А ты сможешь круче? Играй в «От ларька до империи»`;
+  const text=`Моя шаурмичная «${stageInfo(S.stage).name}» (${LOCS[S.loc].name}) приносит ${fmt(totalPerSec(false))} ₽ в секунду! 🌯 А ты сможешь круче? Играй в «Шаурма Тайкун»`;
   Platform.share(text, ok=>{ if(!ok) return; const r=socialReward(180); earn(r); S.shareAt=Date.now();
     Sound.fanfare(); confettiBurst(90); toast('📣 Опубликовано! +'+fmt(r)+' ₽'); save(true); });
 }
@@ -1016,12 +1231,14 @@ function shareWall(){
 let sellerAcc=0, sellerFloatT=0;
 function tick(dt){
   // продавцы лавки
-  if(S.lv.seller>0){
-    earn(stallPerSec()*dt);
+  const sps=stallPerSec();
+  if(sps>0){
+    earn(sps*dt);
     sellerFloatT-=dt;
-    if(sellerFloatT<=0 && tab==='stall'){ sellerFloatT=1.2; const wrap=$('scene'), w=wrap.clientWidth;
-      floatAt(wrap, w*0.6, w*0.38, '+'+fmt(stallPerSec()*1.2), 'small'); }
+    if(sellerFloatT<=0 && tab==='stall' && S.lv.seller>0){ sellerFloatT=1.2; const wrap=$('scene'), w=wrap.clientWidth;
+      floatAt(wrap, w*0.6, w*0.38, '+'+fmt(sellerPsOf(S.loc)*1.2), 'small'); }
   }
+  checkMiamiHint();
   if(FX.length) FX=FX.filter(f=>f.until>Date.now());
   BIZ.forEach((b,i)=>{
     if(!S.owned[i]||!(S.managers[i]||S.running[i])) return;
@@ -1046,7 +1263,14 @@ function loop(now){
 function save(force){ S.lastSave=Date.now(); Platform.saveLocal(S); Platform.saveCloud(S, force); }
 function applySave(d){
   if(!d || !Array.isArray(d.owned) || d.owned.length!==BIZ.length) return false;
-  S=Object.assign(freshState(), d); S.lv=Object.assign(freshState().lv, d.lv||{}); sceneKey='';
+  d=Object.assign({}, d);
+  if(!d.stalls){ d.stalls={msk:{stage:d.stage||0, lv:Object.assign(defaultLv(), d.lv||{})}, mia:{stage:0, lv:defaultLv()}}; }
+  delete d.stage; delete d.lv;
+  S=Object.assign(freshState(), d);
+  for(const k of ['msk','mia']){ S.stalls[k]=Object.assign({stage:0}, S.stalls[k]||{}); S.stalls[k].lv=Object.assign(defaultLv(), S.stalls[k].lv||{}); }
+  if(!Array.isArray(S.inv)||S.inv.length!==BIZ.length) S.inv=BIZ.map((_,i)=>(S.inv&&S.inv[i])||0);
+  S.menu=S.menu||{}; if(!locOpen(S.loc)) S.loc='msk';
+  applyLocVisual();
   const away=Math.min(OFFLINE_CAP,(Date.now()-S.lastSave)/1000), gain=totalPerSec(false)*away;
   if(away>30 && gain>0){
     earn(gain);
@@ -1063,7 +1287,7 @@ function applySave(d){
 /* =========================================================
    СТАРТ
    ========================================================= */
-buildBackdrop(); buildUpgrades(); buildBiz(); setupConfetti();
+buildBackdrop(); buildMiami(); buildUpgrades(); buildMenu(); buildBiz(); setupConfetti();
 try{ Sound.muted = localStorage.getItem('larek_mute')==='1'; }catch(e){}
 $('muteBtn').textContent = Sound.muted ? '🔇' : '🔊';
 const localSave=Platform.loadLocal();
@@ -1078,6 +1302,7 @@ document.addEventListener('pointerdown', ()=>Sound.init());
 $('muteBtn').onclick=()=>{ Sound.init(); Sound.setMuted(!Sound.muted); $('muteBtn').textContent=Sound.muted?'🔇':'🔊'; };
 $('evtBubble').addEventListener('pointerdown', e=>{ e.stopPropagation(); openEvent(); });
 $('golden').addEventListener('pointerdown', catchGold);
+document.querySelectorAll('.locBtn').forEach(b=>b.addEventListener('click',()=>switchLoc(b.dataset.loc)));
 $('invBtn').onclick=inviteFriends; $('shBtn').onclick=shareWall;
 $('scene').addEventListener('pointerdown', tapStall);
 $('rbBtn').onclick=rebuild;
