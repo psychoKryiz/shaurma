@@ -196,7 +196,7 @@
   .modal .stack{display:flex;flex-direction:column}
   .vkTag{font-size:11px;color:#cdbdf5;text-align:center;margin-top:14px}
   /* локации */
-  .locBar{display:flex;gap:8px;margin-bottom:10px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+  .locBar{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-bottom:10px}
   .locBar::-webkit-scrollbar{display:none}
   .restBar{display:flex;gap:8px;margin:2px 0 8px}
   .restBtn{flex:1;border:0;font:inherit;font-weight:900;font-size:14px;padding:8px;border-radius:999px;cursor:pointer;
@@ -204,21 +204,24 @@
   .restBtn.on{background:#fff6e5;color:#3b2716;border-color:#ffc93c;box-shadow:0 3px 0 #e0a400}
   .restBtn.locked{opacity:.75}
   .restBtn small{font-weight:700;font-size:11px;opacity:.8}
+  .restBtn{white-space:nowrap;font-size:13px;padding:8px 6px;overflow:hidden;text-overflow:ellipsis}
   .locBtn.nyc.on{background:linear-gradient(180deg,#ffd23f,#e09f00);box-shadow:0 3px 0 #9c6f00}
   .locBtn.par.on{background:linear-gradient(180deg,#9b8cff,#5a4bd1);box-shadow:0 3px 0 #3a2f99}
   .locBtn.rio.on{background:linear-gradient(180deg,#3ccf6e,#16934a);box-shadow:0 3px 0 #0e6633}
   .locBtn.cai.on{background:linear-gradient(180deg,#ffa94d,#d9480f);box-shadow:0 3px 0 #9a3209}
   .locBtn.pole.on{background:linear-gradient(180deg,#7fd8ff,#2f86c9);box-shadow:0 3px 0 #1d5a8a}
   .prog.thin{height:8px;margin:4px 0 8px}
-  .locBtn{flex:0 0 auto;min-width:104px;border:0;font:inherit;font-weight:800;padding:8px 10px;border-radius:14px;background:rgba(255,255,255,.08);
+  .locBtn{min-width:0;border:0;font:inherit;font-weight:800;padding:6px 2px;border-radius:14px;background:rgba(255,255,255,.08);
     color:#cdbdf5;cursor:pointer;font-size:14px;border:2px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;gap:6px}
   .locBtn.on{background:linear-gradient(180deg,#ff9a3c,#e8641a);color:#fff;box-shadow:0 3px 0 #b84a0c;border-color:transparent}
   .locBtn.mia.on{background:linear-gradient(180deg,#ff6fb5,#c43d8b);box-shadow:0 3px 0 #8f2563}
   .locBtn.tky.on{background:linear-gradient(180deg,#f72585,#7209b7);box-shadow:0 3px 0 #4a0677}
   .locBtn.dxb.on{background:linear-gradient(180deg,#f6c453,#c8901a);box-shadow:0 3px 0 #8c6210}
   .locBtn.moon.on{background:linear-gradient(180deg,#6b7a99,#2f3a55);box-shadow:0 3px 0 #1b2236}
-  .locBtn{flex-direction:column;gap:0;line-height:1.15}
-  .locBtn small{font-size:11px;font-weight:700;opacity:.85}
+  .locBtn{flex-direction:column;gap:1px;line-height:1.1;font-size:11.5px;text-align:center}
+  .locBtn .li{font-size:20px;line-height:1}
+  .locBtn .ln{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  .locBtn small{font-size:10px;font-weight:700;opacity:.85;white-space:nowrap}
   .locBtn.locked{opacity:.8}
   .locBtn.glow{animation:pulse 1.2s infinite}
   /* меню */
@@ -1117,7 +1120,6 @@ function buildPole(){
 function applyLocVisual(){
   LOC_ORDER.forEach(k=>{ $('bg_'+k).style.display = S.loc===k ? '' : 'none'; });
   document.querySelectorAll('.locBtn').forEach(b=>b.classList.toggle('on', b.dataset.loc===S.loc));
-  const act=document.querySelector('.locBtn.on'); if(act){ const bar=$('locBar'); bar.scrollLeft=act.offsetLeft-bar.clientWidth/2+act.clientWidth/2; }
   customers.length=0; sceneKey='';
 }
 let sceneKey='';
@@ -1270,7 +1272,7 @@ function switchRest(r){
 function buildLocBar(){
   const bar=$('locBar');
   LOC_ORDER.forEach(k=>{ const L=LOCS[k], b=document.createElement('button');
-    b.className='locBtn '+k; b.dataset.loc=k; b.innerHTML=`<span>${L.icon} ${L.name}</span><small></small>`;
+    b.className='locBtn '+k; b.dataset.loc=k; b.innerHTML=`<span class="li">${L.icon}</span><span class="ln">${L.name}</span><small></small>`;
     b.addEventListener('click',()=>switchLoc(k)); bar.appendChild(b); });
 }
 const canUnlock = k => !locOpen(k) && LOCS[k].prev && locOpen(LOCS[k].prev) && (LOCS[k].needRest ? restDone(LOCS[k].needRest) : stallLevel(LOCS[k].prev)>=UNLOCK_LEVEL);
